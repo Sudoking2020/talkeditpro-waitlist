@@ -3,18 +3,12 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Talk Edit Pro Studio | Record, Edit & Publish Your Audiobook',
-  description: 'Record, edit, and publish your audiobook — all in your browser. No expensive software. No hiring editors. No confusing workflows.',
+  description: 'Browser-based audiobook production for self-published authors. Record, edit, and export ACX-ready files.',
   keywords: ['audiobook', 'audiobook production', 'ACX', 'Audible', 'self-publishing', 'audiobook recording'],
   authors: [{ name: 'Jeanmarc Alexandre' }],
-  icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon.png', type: 'image/png' },
-    ],
-  },
   openGraph: {
     title: 'Talk Edit Pro Studio',
-    description: 'Record, edit, and publish your audiobook — all in your browser.',
+    description: 'Browser-based audiobook production for self-published authors. Record, edit, and export ACX-ready files.',
     type: 'website',
     url: 'https://talkeditpro.com',
     images: [
@@ -29,7 +23,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Talk Edit Pro Studio',
-    description: 'Record, edit, and publish your audiobook — all in your browser.',
+    description: 'Browser-based audiobook production for self-published authors. Record, edit, and export ACX-ready files.',
     images: ['https://talkeditpro.com/og-image.png'],
   },
 }
