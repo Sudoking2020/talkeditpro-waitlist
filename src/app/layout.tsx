@@ -16,6 +16,21 @@ export const metadata: Metadata = {
     title: 'Talk Edit Pro Studio',
     description: 'Record, edit, and publish your audiobook — all in your browser.',
     type: 'website',
+    url: 'https://talkeditpro.com',
+    images: [
+      {
+        url: 'https://talkeditpro.com/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Talk Edit Pro Studio',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Talk Edit Pro Studio',
+    description: 'Record, edit, and publish your audiobook — all in your browser.',
+    images: ['https://talkeditpro.com/og-image.png'],
   },
 }
 
