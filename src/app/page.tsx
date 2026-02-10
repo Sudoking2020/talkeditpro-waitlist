@@ -133,7 +133,15 @@ export default function Home() {
         {/* Footer */}
         <footer className="max-w-4xl mx-auto text-center pt-12 border-t border-gray-200">
           <p className="text-gray-600 text-sm mb-2">
-            Built by a producer with 1,000+ hours of audio production experience.
+            Built by a producer with 1,000+ hours of audio production experience.{' '}
+            <a
+              href="https://www.linkedin.com/in/jm-alexandre"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-tep-blue-500 hover:text-tep-blue-600 transition-colors font-medium hover:underline"
+            >
+              Connect on LinkedIn
+            </a>
           </p>
           <p className="text-gray-400 text-sm">
             © {new Date().getFullYear()} Talk Edit Pro Studio. All rights reserved.
