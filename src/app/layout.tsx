@@ -26,6 +26,15 @@ export const metadata: Metadata = {
     description: 'Browser-based audiobook production for self-published authors. Record, edit, and export ACX-ready files.',
     images: ['https://talkeditpro.com/og-image.png'],
   },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/logo.png', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/logo.png' },
+    ],
+  },
 }
 
 export default function RootLayout({
