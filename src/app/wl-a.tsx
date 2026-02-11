@@ -6,8 +6,9 @@ import { Mic, Wand2, Upload, Headphones } from 'lucide-react'
 import WaitlistForm from '@/components/WaitlistForm'
 import FeatureCard from '@/components/FeatureCard'
 import ThankYou from '@/components/ThankYou'
+import AcxCheckerPromo from '@/components/AcxCheckerPromo'
 
-export default function Home() {
+export default function ContentA({ variant }: { variant: 'A' | 'B' }) {
   const [hasSignedUp, setHasSignedUp] = useState(false)
 
   const handleWaitlistSuccess = () => {
@@ -66,7 +67,7 @@ export default function Home() {
 
               {/* Waitlist Form */}
               <div className="opacity-0 animate-fade-in-up delay-200">
-                <WaitlistForm onSuccess={handleWaitlistSuccess} />
+                <WaitlistForm variant={variant} onSuccess={handleWaitlistSuccess} />
               </div>
 
               <p className="mt-4 text-gray-500 text-xl opacity-0 animate-fade-in delay-300">
@@ -107,6 +108,11 @@ export default function Home() {
                   delay="700ms"
                 />
               </div>
+            </section>
+
+            {/* ACX Checker promo - free tool for visitors */}
+            <section className="max-w-2xl mx-auto mb-20">
+              <AcxCheckerPromo />
             </section>
 
             {/* Problem Section */}

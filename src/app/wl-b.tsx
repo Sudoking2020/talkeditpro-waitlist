@@ -6,7 +6,7 @@ import { Mic, Type, Wand2, CheckCircle, Download } from 'lucide-react'
 import WaitlistForm from '@/components/WaitlistForm'
 import ThankYou from '@/components/ThankYou'
 
-export default function Home() {
+export default function ContentB({ variant }: { variant: 'A' | 'B' }) {
   const [hasSignedUp, setHasSignedUp] = useState(false)
 
   const handleWaitlistSuccess = () => {
@@ -63,7 +63,7 @@ export default function Home() {
 
               {/* Waitlist Form */}
               <div className="opacity-0 animate-fade-in-up delay-200">
-                <WaitlistForm onSuccess={handleWaitlistSuccess} />
+                <WaitlistForm variant={variant} onSuccess={handleWaitlistSuccess} />
               </div>
 
               <p className="mt-4 text-gray-400 text-sm opacity-0 animate-fade-in delay-300">
@@ -290,7 +290,7 @@ export default function Home() {
                   Now it's time to let readers hear it.
                 </p>
 
-                <WaitlistForm onSuccess={handleWaitlistSuccess} />
+                <WaitlistForm variant={variant} onSuccess={handleWaitlistSuccess} />
               </div>
             </section>
           </>

@@ -36,8 +36,12 @@ CREATE TABLE waitlist (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   source TEXT DEFAULT 'landing_page',
+  variant TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- If you already have the table, add the variant column for A/B tracking:
+-- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS variant TEXT;
 
 -- Enable Row Level Security
 ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
@@ -54,6 +58,8 @@ CREATE POLICY "Allow reading by email" ON waitlist
   TO anon
   USING (true);
 ```
+
+Signups store `email` and `variant` ('A' or 'B') for landing A/B tests.
 
 ### 3. Configure environment variables
 

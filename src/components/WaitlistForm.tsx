@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { ArrowRight, Check, Loader2 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 interface WaitlistFormProps {
+  variant?: 'A' | 'B'
   onSuccess: () => void
 }
 
-export default function WaitlistForm({ onSuccess }: WaitlistFormProps) {
+export default function WaitlistForm({ variant, onSuccess }: WaitlistFormProps) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
@@ -26,9 +27,10 @@ export default function WaitlistForm({ onSuccess }: WaitlistFormProps) {
     setErrorMessage('')
 
     try {
+      const supabase = getSupabase()
       // If supabase is not configured, use test mode
       if (!supabase) {
-        console.log('Test mode: would have saved email:', email)
+        console.log('Test mode: would have saved email:', email, 'variant:', variant)
         setStatus('success')
         setTimeout(onSuccess, 1500)
         return
@@ -48,15 +50,11 @@ export default function WaitlistForm({ onSuccess }: WaitlistFormProps) {
         return
       }
 
-      // Insert new email
+      // Insert new signup with variant for A/B tracking
       const { error } = await supabase
         .from('waitlist')
         .insert([
-          {
-            email: email.toLowerCase(),
-            source: 'landing_page',
-            created_at: new Date().toISOString()
-          }
+          { email: email.toLowerCase(), variant: variant ?? null }
         ])
 
       if (error) throw error

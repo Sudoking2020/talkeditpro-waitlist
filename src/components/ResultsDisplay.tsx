@@ -2,20 +2,7 @@
 
 import { useState } from 'react'
 import { CheckCircle2, XCircle, AlertTriangle, Info, ChevronDown } from 'lucide-react'
-
-interface AcxSpec {
-  name: string
-  value: string
-  requirement: string
-  passed: boolean
-  info?: string
-}
-
-interface ChapterResult {
-  filename: string
-  passed: boolean
-  specs: AcxSpec[]
-}
+import type { ChapterResult } from '@/types/acx'
 
 interface ResultsDisplayProps {
   results: ChapterResult[]

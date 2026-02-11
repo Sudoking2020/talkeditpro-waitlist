@@ -36,7 +36,7 @@ function SplitTestLogic() {
   // Prevent flash by returning null or a loading state until variant is decided
   if (!variant) return null
 
-  return variant === 'A' ? <ContentA /> : <ContentB />
+  return variant === 'A' ? <ContentA variant={variant} /> : <ContentB variant={variant} />
 }
 
 export default function Home() {

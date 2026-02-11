@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { ArrowLeft, Loader2, Play } from 'lucide-react'
 import FileUpload from '@/components/FileUpload'
 import ResultsDisplay from '@/components/ResultsDisplay'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
+import type { AcxSpec, ChapterResult } from '@/types/acx'
 
 interface AudioFile {
   id: string
@@ -14,20 +15,6 @@ interface AudioFile {
   name: string
   size: string
   status: 'pending' | 'analyzing' | 'complete' | 'error'
-}
-
-interface AcxSpec {
-  name: string
-  value: string
-  requirement: string
-  passed: boolean
-  info?: string
-}
-
-interface ChapterResult {
-  filename: string
-  passed: boolean
-  specs: AcxSpec[]
 }
 
 export default function AcxCheckerPage() {
@@ -56,6 +43,13 @@ export default function AcxCheckerPage() {
     setVerifyError('')
 
     try {
+      const supabase = getSupabase()
+      if (!supabase) {
+        setVerifyError('Checker is temporarily unavailable. Please try again later.')
+        setIsVerifying(false)
+        return
+      }
+
       // Check if email exists in waitlist
       const { data, error } = await supabase
         .from('waitlist')
