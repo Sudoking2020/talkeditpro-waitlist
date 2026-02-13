@@ -59,6 +59,9 @@ export default function WaitlistForm({ variant, onSuccess }: WaitlistFormProps) 
 
       if (error) throw error
 
+      // @ts-ignore
+      window.fbq?.('track', 'Lead');
+
       setStatus('success')
       setTimeout(onSuccess, 1500)
     } catch (err) {
