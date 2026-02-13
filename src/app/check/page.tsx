@@ -7,6 +7,8 @@ import { ArrowLeft, Loader2, Play } from 'lucide-react'
 import FileUpload from '@/components/FileUpload'
 import ResultsDisplay from '@/components/ResultsDisplay'
 import { getSupabase } from '@/lib/supabase'
+import { captureUtmFromUrl, getStoredUtmData } from '@/lib/utm'
+import { trackLead } from '@/components/FacebookPixel'
 import type { AcxSpec, ChapterResult } from '@/types/acx'
 
 interface AudioFile {
@@ -27,6 +29,10 @@ export default function AcxCheckerPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [results, setResults] = useState<ChapterResult[] | null>(null)
   const [analyzeError, setAnalyzeError] = useState('')
+
+  useEffect(() => {
+    captureUtmFromUrl('/check')
+  }, [])
 
   // Check localStorage for previously verified email
   useEffect(() => {
@@ -50,22 +56,72 @@ export default function AcxCheckerPage() {
         return
       }
 
-      // Check if email exists in waitlist
-      const { data, error } = await supabase
+      const { data: existing, error: selectError } = await supabase
         .from('waitlist')
         .select('email')
         .eq('email', email.toLowerCase())
         .single()
 
-      if (error || !data) {
-        setVerifyError('Email not found on waitlist. Please join the waitlist first.')
-        setIsVerifying(false)
+      if (existing) {
+        const utmData = getStoredUtmData()
+        fetch('/api/mailerlite/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.toLowerCase(),
+            source: 'acx_checker_verify',
+            utm_source: utmData?.utm_source,
+            utm_medium: utmData?.utm_medium,
+            utm_campaign: utmData?.utm_campaign,
+            landing_page: utmData?.landing_page,
+          }),
+        }).catch(() => {})
+        localStorage.setItem('tep_verified_email', email.toLowerCase())
+        setIsVerified(true)
+        trackLead(utmData?.landing_page ?? undefined)
         return
       }
 
-      // Email verified
-      localStorage.setItem('tep_verified_email', email.toLowerCase())
-      setIsVerified(true)
+      // Not on waitlist: if they came from a squeeze page (have UTM/landing), add them and let them in
+      const utm = getStoredUtmData()
+      const fromSqueeze = utm?.landing_page && ['/acx-checker', '/audiobook-ready', '/stop-overpaying'].includes(utm.landing_page)
+
+      if (fromSqueeze && utm) {
+        const row: Record<string, unknown> = {
+          email: email.toLowerCase(),
+          variant: null,
+          source: 'squeeze_checker',
+        }
+        if (utm.utm_source) row.utm_source = utm.utm_source
+        if (utm.utm_medium) row.utm_medium = utm.utm_medium
+        if (utm.utm_campaign) row.utm_campaign = utm.utm_campaign
+        if (utm.utm_content) row.utm_content = utm.utm_content
+        if (utm.landing_page) row.landing_page = utm.landing_page
+        if (utm.landed_at) row.landed_at = utm.landed_at
+
+        const { error: insertError } = await supabase.from('waitlist').insert([row])
+        if (insertError) throw insertError
+
+        fetch('/api/mailerlite/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.toLowerCase(),
+            source: 'squeeze_checker',
+            utm_source: utm.utm_source,
+            utm_medium: utm.utm_medium,
+            utm_campaign: utm.utm_campaign,
+            landing_page: utm.landing_page,
+          }),
+        }).catch(() => {})
+
+        localStorage.setItem('tep_verified_email', email.toLowerCase())
+        setIsVerified(true)
+        trackLead(utm.landing_page ?? undefined)
+        return
+      }
+
+      setVerifyError('Email not found on waitlist. Please join the waitlist first.')
     } catch (err) {
       setVerifyError('Something went wrong. Please try again.')
     } finally {
@@ -206,7 +262,29 @@ export default function AcxCheckerPage() {
           ) : (
             /* ACX Checker Interface */
             <div className="space-y-8">
-              {/* File Upload */}
+              {/* Waitlist pitch: founding member copy for stop-overpaying */}
+              {(() => {
+                const landing = getStoredUtmData()?.landing_page
+                const isStopOverpaying = landing === '/stop-overpaying'
+                return (
+                  <div className="p-4 rounded-xl bg-tep-blue-50 border border-tep-blue-100">
+                    {isStopOverpaying ? (
+                      <p className="text-gray-800 text-lg">
+                        Join the early access waitlist. First 500 members get{' '}
+                        <strong>founding member pricing</strong> when we launch.{' '}
+                        <Link href="/waitlist" className="text-tep-blue-600 font-semibold hover:underline">
+                          Join the waitlist →
+                        </Link>
+                      </p>
+                    ) : (
+                      <p className="text-gray-800 text-lg">
+                        You&apos;re on the list. We&apos;ll email you when we launch. In the meantime, check your files below.
+                      </p>
+                    )}
+                  </div>
+                )
+              })()}
+
               {!results && (
                 <>
                   <FileUpload

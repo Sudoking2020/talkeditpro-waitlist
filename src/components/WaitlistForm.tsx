@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { ArrowRight, Check, Loader2 } from 'lucide-react'
 import { getSupabase } from '@/lib/supabase'
+import { getStoredUtmData } from '@/lib/utm'
+import { trackLead } from '@/components/FacebookPixel'
 
 interface WaitlistFormProps {
   variant?: 'A' | 'B'
@@ -44,23 +46,56 @@ export default function WaitlistForm({ variant, onSuccess }: WaitlistFormProps) 
         .single()
 
       if (existing) {
-        // Email already on waitlist, still count as success
+        // Email already on waitlist, still count as success (optionally sync to MailerLite)
+        fetch('/api/mailerlite/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.toLowerCase(),
+            variant: variant ?? undefined,
+            utm_source: getStoredUtmData()?.utm_source,
+            utm_medium: getStoredUtmData()?.utm_medium,
+            utm_campaign: getStoredUtmData()?.utm_campaign,
+            landing_page: getStoredUtmData()?.landing_page,
+          }),
+        }).catch(() => {})
         setStatus('success')
         setTimeout(onSuccess, 1500)
         return
       }
 
-      // Insert new signup with variant for A/B tracking
-      const { error } = await supabase
-        .from('waitlist')
-        .insert([
-          { email: email.toLowerCase(), variant: variant ?? null }
-        ])
+      const utm = getStoredUtmData()
+      const row: Record<string, unknown> = {
+        email: email.toLowerCase(),
+        variant: variant ?? null,
+      }
+      if (utm?.utm_source) row.utm_source = utm.utm_source
+      if (utm?.utm_medium) row.utm_medium = utm.utm_medium
+      if (utm?.utm_campaign) row.utm_campaign = utm.utm_campaign
+      if (utm?.utm_content) row.utm_content = utm.utm_content
+      if (utm?.landing_page) row.landing_page = utm.landing_page
+      if (utm?.landed_at) row.landed_at = utm.landed_at
+
+      const { error } = await supabase.from('waitlist').insert([row])
 
       if (error) throw error
 
-      // @ts-ignore
-      window.fbq?.('track', 'Lead');
+      trackLead(utm?.landing_page ?? undefined)
+
+      // Sync to MailerLite (fire-and-forget, don't block success)
+      fetch('/api/mailerlite/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.toLowerCase(),
+          variant: variant ?? undefined,
+          utm_source: utm?.utm_source,
+          utm_medium: utm?.utm_medium,
+          utm_campaign: utm?.utm_campaign,
+          landing_page: utm?.landing_page,
+        }),
+      }).catch(() => {})
+
 
       setStatus('success')
       setTimeout(onSuccess, 1500)
