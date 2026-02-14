@@ -36,7 +36,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body className="font-body antialiased">
 
         <Script id="meta-pixel" strategy="afterInteractive">
           {`

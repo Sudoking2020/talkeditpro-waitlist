@@ -35,6 +35,7 @@ Create a `waitlist` table in your Supabase project:
 CREATE TABLE waitlist (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
+  first_name TEXT,
   source TEXT DEFAULT 'landing_page',
   variant TEXT,
   utm_source TEXT,
@@ -47,6 +48,7 @@ CREATE TABLE waitlist (
 );
 
 -- If you already have the table, add new columns:
+-- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS first_name TEXT;
 -- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS variant TEXT;
 -- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS utm_source TEXT;
 -- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS utm_medium TEXT;
@@ -96,11 +98,16 @@ Sync waitlist signups to MailerLite for email campaigns:
 MAILERLITE_API_TOKEN=your_api_token_here
 ```
 
-3. To add subscribers to a specific group, create a group in MailerLite, then run `GET /api/mailerlite/groups` to find its ID. Add:
+3. Add group IDs (from `GET /api/mailerlite/groups`):
 
 ```
-MAILERLITE_WAITLIST_GROUP_ID=your_group_id
+# Checker Users: squeeze → checker flow (/tool, /check verify)
+MAILERLITE_CHECKER_USERS_GROUP_ID=your_checker_group_id
+# Founders Waitlist Only: main page, /waitlist (never touched checker)
+MAILERLITE_WAITLIST_ONLY_GROUP_ID=your_waitlist_group_id
 ```
+
+`MAILERLITE_WAITLIST_GROUP_ID` is still supported as a fallback for Founders Waitlist Only.
 
 **API routes** (for campaign configuration via AI or scripts):
 
@@ -112,7 +119,7 @@ MAILERLITE_WAITLIST_GROUP_ID=your_group_id
 | `/api/mailerlite/campaigns` | GET | List campaigns |
 | `/api/mailerlite/campaigns` | POST | Create draft campaign |
 
-To store UTM/variant data in MailerLite, create custom fields in MailerLite (Subscribers → Fields): `variant`, `utm_source`, `utm_medium`, `utm_campaign`, `landing_page`, `source`.
+**Flow:** Checker Users (squeeze → checker) go to one group; Founders Waitlist Only (main page, never touched checker) go to another. Create custom fields in MailerLite (Subscribers → Fields): `name`, `variant`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `landing_page`, `source`.
 
 ### Squeeze pages (Facebook ads)
 
@@ -123,6 +130,7 @@ Three lightweight landing pages for ad campaigns:
 | `/acx-checker` | ACX rejection angle → checker tool |
 | `/audiobook-ready` | Spotify FOMO → checker or waitlist |
 | `/stop-overpaying` | Cost shock → checker tool |
+| `/tool` | Direct link to ACX checker (no gate) + signup with first name under founder photo |
 
 UTM parameters are captured on arrival and attached to email signups. No nav, no footer links, mobile-first.
 

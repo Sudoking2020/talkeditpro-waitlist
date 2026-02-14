@@ -9,9 +9,14 @@ import { trackLead } from '@/components/FacebookPixel'
 interface WaitlistFormProps {
   variant?: 'A' | 'B'
   onSuccess: () => void
+  /** When true, shows first name field (for pages like /tool) */
+  showFirstName?: boolean
+  /** Optional source for attribution (e.g. 'tool') */
+  source?: string
 }
 
-export default function WaitlistForm({ variant, onSuccess }: WaitlistFormProps) {
+export default function WaitlistForm({ variant, onSuccess, showFirstName, source }: WaitlistFormProps) {
+  const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
@@ -52,10 +57,13 @@ export default function WaitlistForm({ variant, onSuccess }: WaitlistFormProps) 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: email.toLowerCase(),
+            name: showFirstName ? firstName.trim() || undefined : undefined,
+            source: source ?? undefined,
             variant: variant ?? undefined,
             utm_source: getStoredUtmData()?.utm_source,
             utm_medium: getStoredUtmData()?.utm_medium,
             utm_campaign: getStoredUtmData()?.utm_campaign,
+            utm_content: getStoredUtmData()?.utm_content,
             landing_page: getStoredUtmData()?.landing_page,
           }),
         }).catch(() => {})
@@ -69,12 +77,16 @@ export default function WaitlistForm({ variant, onSuccess }: WaitlistFormProps) 
         email: email.toLowerCase(),
         variant: variant ?? null,
       }
+      if (showFirstName && firstName.trim()) {
+        row.first_name = firstName.trim()
+      }
       if (utm?.utm_source) row.utm_source = utm.utm_source
       if (utm?.utm_medium) row.utm_medium = utm.utm_medium
       if (utm?.utm_campaign) row.utm_campaign = utm.utm_campaign
       if (utm?.utm_content) row.utm_content = utm.utm_content
-      if (utm?.landing_page) row.landing_page = utm.landing_page
-      if (utm?.landed_at) row.landed_at = utm.landed_at
+        if (utm?.landing_page) row.landing_page = utm.landing_page
+        if (utm?.landed_at) row.landed_at = utm.landed_at
+      if (source) row.source = source
 
       const { error } = await supabase.from('waitlist').insert([row])
 
@@ -88,10 +100,13 @@ export default function WaitlistForm({ variant, onSuccess }: WaitlistFormProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.toLowerCase(),
+          name: showFirstName ? firstName.trim() || undefined : undefined,
+          source: source ?? undefined,
           variant: variant ?? undefined,
           utm_source: utm?.utm_source,
           utm_medium: utm?.utm_medium,
           utm_campaign: utm?.utm_campaign,
+          utm_content: utm?.utm_content,
           landing_page: utm?.landing_page,
         }),
       }).catch(() => {})
@@ -115,13 +130,28 @@ export default function WaitlistForm({ variant, onSuccess }: WaitlistFormProps) 
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto">
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 relative">
+      <div className="flex flex-col gap-3">
+        {showFirstName && (
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="First name"
+            disabled={status === 'loading' || status === 'success'}
+            className="w-full px-5 py-4 rounded-xl bg-white border border-gray-300 
+                     text-gray-900 placeholder:text-gray-500 text-lg
+                     focus:border-tep-blue-500 focus:ring-2 focus:ring-tep-blue-100
+                     disabled:opacity-50 disabled:cursor-not-allowed
+                     transition-all duration-300 shadow-sm"
+          />
+        )}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
             disabled={status === 'loading' || status === 'success'}
             className="w-full px-5 py-4 rounded-xl bg-white border border-gray-300 
                      text-gray-900 placeholder:text-gray-500 text-lg
@@ -161,6 +191,7 @@ export default function WaitlistForm({ variant, onSuccess }: WaitlistFormProps) 
             </>
           )}
         </button>
+        </div>
       </div>
 
       {status === 'error' && errorMessage && (

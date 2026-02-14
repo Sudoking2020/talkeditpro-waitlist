@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { addSubscriber, isMailerLiteConfigured } from '@/lib/mailerlite'
 
+const CHECKER_SOURCES = ['tool', 'acx_checker_verify', 'squeeze_checker']
+
 /**
  * POST /api/mailerlite/subscribe
  * Adds a subscriber to MailerLite (create or upsert).
- * Call this after a successful waitlist signup to sync to your email list.
+ * Uses the correct group based on flow:
+ * - Checker Users: source is tool, acx_checker_verify, or squeeze_checker
+ * - Founders Waitlist Only: main page, /waitlist, or any other signup
  */
 export async function POST(req: NextRequest) {
   try {
@@ -24,10 +28,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const source = typeof body?.source === 'string' ? body.source : ''
+    const usedChecker = CHECKER_SOURCES.includes(source)
+
     const groups: string[] = []
-    const waitlistGroupId = process.env.MAILERLITE_WAITLIST_GROUP_ID
-    if (waitlistGroupId) {
-      groups.push(waitlistGroupId)
+    const checkerGroupId = process.env.MAILERLITE_CHECKER_USERS_GROUP_ID
+    const waitlistOnlyGroupId =
+      process.env.MAILERLITE_WAITLIST_ONLY_GROUP_ID ||
+      process.env.MAILERLITE_WAITLIST_GROUP_ID // backwards compat
+
+    if (usedChecker && checkerGroupId) {
+      groups.push(checkerGroupId)
+    } else if (!usedChecker && waitlistOnlyGroupId) {
+      groups.push(waitlistOnlyGroupId)
     }
     if (Array.isArray(body.groups)) {
       for (const g of body.groups) {
@@ -36,6 +49,9 @@ export async function POST(req: NextRequest) {
     }
 
     const fields: Record<string, string | null> = {}
+    if (body.name && typeof body.name === 'string' && body.name.trim()) {
+      fields.name = body.name.trim()
+    }
     if (body.variant && typeof body.variant === 'string') {
       fields.variant = body.variant
     }
@@ -47,6 +63,9 @@ export async function POST(req: NextRequest) {
     }
     if (body.utm_campaign && typeof body.utm_campaign === 'string') {
       fields.utm_campaign = body.utm_campaign
+    }
+    if (body.utm_content && typeof body.utm_content === 'string') {
+      fields.utm_content = body.utm_content
     }
     if (body.landing_page && typeof body.landing_page === 'string') {
       fields.landing_page = body.landing_page
