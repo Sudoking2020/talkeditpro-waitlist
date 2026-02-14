@@ -28,7 +28,7 @@ export default function WaitlistSqueezeClient() {
       <section className="flex-1 px-5 py-12 sm:py-16 max-w-md mx-auto w-full">
         <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">Join the waitlist</h1>
         <p className="text-gray-600 text-center mb-8">Early access to Talk Edit Pro Studio. No credit card.</p>
-        <WaitlistForm onSuccess={() => {}} />
+        <WaitlistForm showFirstName onSuccess={() => {}} />
       </section>
       <footer className="mt-auto py-5 px-5 bg-[#f8f8f8] border-t border-[#eee]">
         <p className="text-center text-[#999] text-sm">

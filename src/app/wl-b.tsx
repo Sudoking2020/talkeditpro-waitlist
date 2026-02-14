@@ -63,7 +63,7 @@ export default function ContentB({ variant }: { variant: 'A' | 'B' }) {
 
               {/* Waitlist Form */}
               <div className="opacity-0 animate-fade-in-up delay-200">
-                <WaitlistForm variant={variant} onSuccess={handleWaitlistSuccess} />
+                <WaitlistForm variant={variant} showFirstName onSuccess={handleWaitlistSuccess} />
               </div>
 
               <p className="mt-4 text-gray-400 text-sm opacity-0 animate-fade-in delay-300">
@@ -290,7 +290,7 @@ export default function ContentB({ variant }: { variant: 'A' | 'B' }) {
                   Now it's time to let readers hear it.
                 </p>
 
-                <WaitlistForm variant={variant} onSuccess={handleWaitlistSuccess} />
+                <WaitlistForm variant={variant} showFirstName onSuccess={handleWaitlistSuccess} />
               </div>
             </section>
           </>

@@ -67,7 +67,7 @@ export default function ContentA({ variant }: { variant: 'A' | 'B' }) {
 
               {/* Waitlist Form */}
               <div className="opacity-0 animate-fade-in-up delay-200">
-                <WaitlistForm variant={variant} onSuccess={handleWaitlistSuccess} />
+                <WaitlistForm variant={variant} showFirstName onSuccess={handleWaitlistSuccess} />
               </div>
 
               <p className="mt-4 text-gray-500 text-xl opacity-0 animate-fade-in delay-300">
