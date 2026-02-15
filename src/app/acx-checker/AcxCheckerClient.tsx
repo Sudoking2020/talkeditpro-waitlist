@@ -1,13 +1,13 @@
 'use client'
 
 import SqueezePage from '@/components/SqueezePage'
-import { FacebookPixelPageView } from '@/components/FacebookPixel'
+import { FacebookPixelCustomEvent } from '@/components/FacebookPixel'
 import { acxCheckerContent } from './content'
 
 export default function AcxCheckerClient() {
   return (
     <>
-      <FacebookPixelPageView page="/acx-checker" />
+      <FacebookPixelCustomEvent eventName="ACXPageView_V1" />
       <SqueezePage {...acxCheckerContent} />
     </>
   )

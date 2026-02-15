@@ -129,8 +129,8 @@ export default function WaitlistForm({ variant, onSuccess, showFirstName, source
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto">
-      <div className="flex flex-col gap-3">
+    <form onSubmit={handleSubmit} className={`w-full mx-auto ${showFirstName ? 'max-w-xl' : 'max-w-md'}`}>
+      <div className="flex flex-col sm:flex-row gap-3">
         {showFirstName && (
           <input
             type="text"
@@ -138,20 +138,19 @@ export default function WaitlistForm({ variant, onSuccess, showFirstName, source
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="First name"
             disabled={status === 'loading' || status === 'success'}
-            className="w-full px-5 py-4 rounded-xl bg-white border border-gray-300 
+            className="w-full sm:w-36 sm:min-w-[120px] px-5 py-4 rounded-xl bg-white border border-gray-300 
                      text-gray-900 placeholder:text-gray-500 text-lg
                      focus:border-tep-blue-500 focus:ring-2 focus:ring-tep-blue-100
                      disabled:opacity-50 disabled:cursor-not-allowed
                      transition-all duration-300 shadow-sm"
           />
         )}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+        <div className="flex-1 min-w-0">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
             disabled={status === 'loading' || status === 'success'}
             className="w-full px-5 py-4 rounded-xl bg-white border border-gray-300 
                      text-gray-900 placeholder:text-gray-500 text-lg
@@ -170,7 +169,7 @@ export default function WaitlistForm({ variant, onSuccess, showFirstName, source
                    hover:shadow-lg hover:shadow-tep-blue-500/30
                    transform hover:-translate-y-0.5
                    transition-all duration-300
-                   flex items-center justify-center gap-2 min-w-[160px]"
+                   flex items-center justify-center gap-2 min-w-[160px] shrink-0"
         >
           {status === 'loading' && (
             <>
@@ -191,7 +190,6 @@ export default function WaitlistForm({ variant, onSuccess, showFirstName, source
             </>
           )}
         </button>
-        </div>
       </div>
 
       {status === 'error' && errorMessage && (
