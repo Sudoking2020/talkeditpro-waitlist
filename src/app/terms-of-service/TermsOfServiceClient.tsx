@@ -312,10 +312,10 @@ export default function TermsOfServiceClient() {
                 <p className="text-gray-700">
                   Email:{' '}
                   <a 
-                    href="mailto:legal@talkeditpro.com" 
+                    href="mailto:support@talkeditpro.com" 
                     className="text-tep-blue-500 hover:text-tep-blue-600 transition-colors hover:underline"
                   >
-                    legal@talkeditpro.com
+                    support@talkeditpro.com
                   </a>
                 </p>
               </div>

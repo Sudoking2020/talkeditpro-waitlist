@@ -253,10 +253,10 @@ export default function PrivacyPolicyClient() {
                 <p className="text-gray-700">
                   Email:{' '}
                   <a 
-                    href="mailto:privacy@talkeditpro.com" 
+                    href="mailto:support@talkeditpro.com" 
                     className="text-tep-blue-500 hover:text-tep-blue-600 transition-colors hover:underline"
                   >
-                    privacy@talkeditpro.com
+                    support@talkeditpro.com
                   </a>
                 </p>
               </div>
