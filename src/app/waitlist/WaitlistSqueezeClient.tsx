@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import WaitlistForm from '@/components/WaitlistForm'
+import ThankYou from '@/components/ThankYou'
 import { captureUtmFromUrl } from '@/lib/utm'
 
 export default function WaitlistSqueezeClient() {
   const [mounted, setMounted] = useState(false)
+  const [hasSignedUp, setHasSignedUp] = useState(false)
 
   useEffect(() => {
     captureUtmFromUrl('/waitlist')
@@ -25,10 +27,19 @@ export default function WaitlistSqueezeClient() {
 
   return (
     <main className="min-h-screen flex flex-col bg-white">
-      <section className="flex-1 px-5 py-12 sm:py-16 max-w-md mx-auto w-full">
-        <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">Join the waitlist</h1>
-        <p className="text-gray-600 text-center mb-8">Early access to Talk Edit Pro Studio. No credit card.</p>
-        <WaitlistForm showFirstName onSuccess={() => {}} />
+      <section className="flex-1 px-5 py-12 sm:py-16 mx-auto w-full">
+        {hasSignedUp ? (
+          <ThankYou />
+        ) : (
+          <div className="max-w-md mx-auto">
+            <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">Join the waitlist</h1>
+            <p className="text-gray-600 text-center mb-8">Early access to Talk Edit Pro Studio. No credit card.</p>
+            <WaitlistForm showFirstName onSuccess={() => {
+              setHasSignedUp(true)
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }} />
+          </div>
+        )}
       </section>
       <footer className="mt-auto py-5 px-5 bg-[#f8f8f8] border-t border-[#eee]">
         <p className="text-center text-[#999] text-sm">
