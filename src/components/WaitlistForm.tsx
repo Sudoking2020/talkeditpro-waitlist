@@ -1,25 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { ArrowRight, Check, Loader2 } from 'lucide-react'
-import { getSupabase } from '@/lib/supabase'
 import { getStoredUtmData } from '@/lib/utm'
 import { trackLead } from '@/components/FacebookPixel'
 
 interface WaitlistFormProps {
   variant?: 'A' | 'B'
   onSuccess: () => void
-  /** When true, shows first name field (for pages like /tool) */
+  /** When true, shows first name field. Defaults to true so name is collected unless you pass false. */
   showFirstName?: boolean
-  /** Optional source for attribution (e.g. 'tool') */
+  /** Optional source override (e.g. 'tool'); otherwise `?ref=` or pathname is used */
   source?: string
 }
 
-export default function WaitlistForm({ variant, onSuccess, showFirstName, source }: WaitlistFormProps) {
+function WaitlistFormFallback(props: WaitlistFormProps) {
+  const showFirstName = props.showFirstName ?? true
+  return (
+    <div className={`w-full mx-auto ${showFirstName ? 'max-w-xl' : 'max-w-md'} animate-pulse`}>
+      <div className="flex flex-col sm:flex-row gap-3">
+        {showFirstName && <div className="w-full sm:w-36 h-[60px] rounded-xl bg-gray-200" />}
+        <div className="flex-1 h-[60px] rounded-xl bg-gray-200" />
+        <div className="min-w-[160px] h-[60px] rounded-xl bg-tep-blue-200" />
+      </div>
+    </div>
+  )
+}
+
+function WaitlistFormInner({ variant, onSuccess, showFirstName: showFirstNameProp, source }: WaitlistFormProps) {
+  const showFirstName = showFirstNameProp ?? true
+  const searchParams = useSearchParams()
+  const pathname = usePathname()
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
+
+  const attributionSource = source ?? searchParams.get('ref') ?? pathname ?? '/'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,74 +52,41 @@ export default function WaitlistForm({ variant, onSuccess, showFirstName, source
     setErrorMessage('')
 
     try {
-      const supabase = getSupabase()
-      // If supabase is not configured, use test mode
-      if (!supabase) {
-        console.log('Test mode: would have saved email:', email, 'variant:', variant)
-        setStatus('success')
-        setTimeout(onSuccess, 1500)
-        return
+      const trimmedName = firstName.trim()
+      const payload: Record<string, string> = {
+        email: email.toLowerCase(),
+        source: attributionSource,
+      }
+      if (trimmedName) payload.name = trimmedName
+
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      let data: { ok?: boolean; error?: string; alreadySubscribed?: boolean } = {}
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error('Invalid response')
       }
 
-      // Check if email already exists
-      const { data: existing } = await supabase
-        .from('waitlist')
-        .select('email')
-        .eq('email', email.toLowerCase())
-        .single()
-
-      if (existing) {
-        // Email already on waitlist, still count as success (optionally sync to MailerLite)
-        fetch('/api/mailerlite/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.toLowerCase(),
-            name: showFirstName ? firstName.trim() || undefined : undefined,
-            source: source ?? undefined,
-            variant: variant ?? undefined,
-            utm_source: getStoredUtmData()?.utm_source,
-            utm_medium: getStoredUtmData()?.utm_medium,
-            utm_campaign: getStoredUtmData()?.utm_campaign,
-            utm_content: getStoredUtmData()?.utm_content,
-            landing_page: getStoredUtmData()?.landing_page,
-          }),
-        }).catch(() => {})
-        setStatus('success')
-        setTimeout(onSuccess, 1500)
+      if (!res.ok || data.ok === false) {
+        setErrorMessage(data.error ?? 'Something went wrong. Please try again.')
+        setStatus('error')
         return
       }
 
       const utm = getStoredUtmData()
-      const row: Record<string, unknown> = {
-        email: email.toLowerCase(),
-        variant: variant ?? null,
-      }
-      if (showFirstName && firstName.trim()) {
-        row.first_name = firstName.trim()
-      }
-      if (utm?.utm_source) row.utm_source = utm.utm_source
-      if (utm?.utm_medium) row.utm_medium = utm.utm_medium
-      if (utm?.utm_campaign) row.utm_campaign = utm.utm_campaign
-      if (utm?.utm_content) row.utm_content = utm.utm_content
-        if (utm?.landing_page) row.landing_page = utm.landing_page
-        if (utm?.landed_at) row.landed_at = utm.landed_at
-      if (source) row.source = source
 
-      const { error } = await supabase.from('waitlist').insert([row])
-
-      if (error) throw error
-
-      trackLead(utm?.landing_page ?? undefined)
-
-      // Sync to MailerLite (fire-and-forget, don't block success)
       fetch('/api/mailerlite/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.toLowerCase(),
           name: showFirstName ? firstName.trim() || undefined : undefined,
-          source: source ?? undefined,
+          source: source ?? attributionSource,
           variant: variant ?? undefined,
           utm_source: utm?.utm_source,
           utm_medium: utm?.utm_medium,
@@ -111,19 +96,15 @@ export default function WaitlistForm({ variant, onSuccess, showFirstName, source
         }),
       }).catch(() => {})
 
+      if (!data.alreadySubscribed) {
+        trackLead(utm?.landing_page ?? undefined)
+      }
 
       setStatus('success')
       setTimeout(onSuccess, 1500)
     } catch (err) {
       console.error('Waitlist signup error:', err)
-      // If it's a connection error, fall back to test mode
-      if (err instanceof Error && (err.message.includes('fetch') || err.message.includes('network'))) {
-        console.log('Test mode (connection error): would have saved email:', email)
-        setStatus('success')
-        setTimeout(onSuccess, 1500)
-        return
-      }
-      setErrorMessage('Something went wrong. Please try again.')
+      setErrorMessage('Unable to save your email right now. Please try again in a moment.')
       setStatus('error')
     }
   }
@@ -202,5 +183,13 @@ export default function WaitlistForm({ variant, onSuccess, showFirstName, source
         </p>
       )}
     </form>
+  )
+}
+
+export default function WaitlistForm(props: WaitlistFormProps) {
+  return (
+    <Suspense fallback={<WaitlistFormFallback {...props} />}>
+      <WaitlistFormInner {...props} />
+    </Suspense>
   )
 }

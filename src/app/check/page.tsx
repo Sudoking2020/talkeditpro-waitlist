@@ -5,7 +5,6 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import AcxCheckerTool from '@/components/AcxCheckerTool'
-import { getSupabase } from '@/lib/supabase'
 import { captureUtmFromUrl, getStoredUtmData } from '@/lib/utm'
 import { trackLead } from '@/components/FacebookPixel'
 
@@ -19,7 +18,6 @@ export default function AcxCheckerPage() {
     captureUtmFromUrl('/check')
   }, [])
 
-  // Check localStorage for previously verified email
   useEffect(() => {
     const savedEmail = localStorage.getItem('tep_verified_email')
     if (savedEmail) {
@@ -34,27 +32,44 @@ export default function AcxCheckerPage() {
     setVerifyError('')
 
     try {
-      const supabase = getSupabase()
-      if (!supabase) {
-        setVerifyError('Checker is temporarily unavailable. Please try again later.')
-        setIsVerifying(false)
+      const utm = getStoredUtmData()
+      const res = await fetch('/api/waitlist/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.toLowerCase(),
+          landing_page: utm?.landing_page,
+        }),
+      })
+
+      let data: {
+        ok?: boolean
+        outcome?: string
+        error?: string
+      } = {}
+
+      try {
+        data = await res.json()
+      } catch {
+        throw new Error('Invalid response')
+      }
+
+      if (!res.ok || data.ok === false) {
+        setVerifyError(data.error ?? 'Unable to verify right now. Please try again.')
         return
       }
 
-      const { data: existing, error: selectError } = await supabase
-        .from('waitlist')
-        .select('email')
-        .eq('email', email.toLowerCase())
-        .single()
-
-      if (existing) {
+      if (data.outcome === 'on_waitlist' || data.outcome === 'squeeze_added') {
         const utmData = getStoredUtmData()
+        const mlSource =
+          data.outcome === 'squeeze_added' ? 'squeeze_checker' : 'acx_checker_verify'
+
         fetch('/api/mailerlite/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: email.toLowerCase(),
-            source: 'acx_checker_verify',
+            source: mlSource,
             utm_source: utmData?.utm_source,
             utm_medium: utmData?.utm_medium,
             utm_campaign: utmData?.utm_campaign,
@@ -62,54 +77,12 @@ export default function AcxCheckerPage() {
             landing_page: utmData?.landing_page,
           }),
         }).catch(() => {})
+
         localStorage.setItem('tep_verified_email', email.toLowerCase())
         setIsVerified(true)
         trackLead(utmData?.landing_page ?? undefined)
-        return
       }
-
-      // Not on waitlist: if they came from a squeeze page (have UTM/landing), add them and let them in
-      const utm = getStoredUtmData()
-      const fromSqueeze = utm?.landing_page && ['/acx-checker', '/audiobook-ready', '/stop-overpaying'].includes(utm.landing_page)
-
-      if (fromSqueeze && utm) {
-        const row: Record<string, unknown> = {
-          email: email.toLowerCase(),
-          variant: null,
-          source: 'squeeze_checker',
-        }
-        if (utm.utm_source) row.utm_source = utm.utm_source
-        if (utm.utm_medium) row.utm_medium = utm.utm_medium
-        if (utm.utm_campaign) row.utm_campaign = utm.utm_campaign
-        if (utm.utm_content) row.utm_content = utm.utm_content
-        if (utm.landing_page) row.landing_page = utm.landing_page
-        if (utm.landed_at) row.landed_at = utm.landed_at
-
-        const { error: insertError } = await supabase.from('waitlist').insert([row])
-        if (insertError) throw insertError
-
-        fetch('/api/mailerlite/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email.toLowerCase(),
-            source: 'squeeze_checker',
-            utm_source: utm.utm_source,
-            utm_medium: utm.utm_medium,
-            utm_campaign: utm.utm_campaign,
-            utm_content: utm.utm_content,
-            landing_page: utm.landing_page,
-          }),
-        }).catch(() => {})
-
-        localStorage.setItem('tep_verified_email', email.toLowerCase())
-        setIsVerified(true)
-        trackLead(utm.landing_page ?? undefined)
-        return
-      }
-
-      setVerifyError('Email not found on waitlist. Please join the waitlist first.')
-    } catch (err) {
+    } catch {
       setVerifyError('Something went wrong. Please try again.')
     } finally {
       setIsVerifying(false)
@@ -118,14 +91,12 @@ export default function AcxCheckerPage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Background decoration */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-tep-blue-500/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-tep-blue-600/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 px-6 py-12 md:py-20 font-body">
-        {/* Header */}
         <header className="max-w-4xl mx-auto mb-12">
           <Link
             href="/"
@@ -155,7 +126,6 @@ export default function AcxCheckerPage() {
         </header>
 
         <div className="max-w-4xl mx-auto">
-          {/* Email Verification Gate */}
           {!isVerified ? (
             <div className="p-8 rounded-3xl bg-gradient-to-br from-tep-blue-50 to-blue-50 border border-tep-blue-100 shadow-sm">
               <h2 className="font-display text-2xl font-semibold text-gray-900 mb-4">
@@ -230,7 +200,6 @@ export default function AcxCheckerPage() {
           )}
         </div>
 
-        {/* Footer */}
         <footer className="max-w-4xl mx-auto text-center mt-20 pt-12 border-t border-gray-200">
           <p className="text-gray-600 text-sm mb-2">
             Built by a producer with 1,000+ hours of audio production experience.{' '}
@@ -251,4 +220,3 @@ export default function AcxCheckerPage() {
     </main>
   )
 }
-

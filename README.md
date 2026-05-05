@@ -4,7 +4,7 @@ Landing page and waitlist for Talk Edit Pro Studio, plus a free ACX Compliance C
 
 ## Features
 
-- **Waitlist signup** - Captures emails to Supabase and optionally syncs to MailerLite
+- **Waitlist signup** - Captures emails to a self-hosted PocketBase collection via server-side API routes; optionally syncs to MailerLite
 - **ACX Compliance Checker** - Analyzes audio files against ACX/Audible requirements
   - Peak level analysis
   - RMS loudness measurement
@@ -14,7 +14,7 @@ Landing page and waitlist for Talk Edit Pro Studio, plus a free ACX Compliance C
 ## Tech Stack
 
 - **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS
-- **Database**: Supabase
+- **Database**: PocketBase (self-hosted)
 - **Hosting**: Vercel
 
 ## Setup
@@ -27,61 +27,26 @@ cd talkeditpro-waitlist
 npm install
 ```
 
-### 2. Set up Supabase
+### 2. Set up PocketBase
 
-Create a `waitlist` table in your Supabase project:
+Create a collection named `waitlist` with:
 
-```sql
-CREATE TABLE waitlist (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  first_name TEXT,
-  source TEXT DEFAULT 'landing_page',
-  variant TEXT,
-  utm_source TEXT,
-  utm_medium TEXT,
-  utm_campaign TEXT,
-  utm_content TEXT,
-  landing_page TEXT,
-  landed_at TIMESTAMPTZ,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+| Field | Type | Notes |
+|-------|------|--------|
+| `email` | Email | Required, unique |
+| `name` | Text | Optional |
+| `source` | Text | Optional (attribution; e.g. pathname or `?ref=` ) |
 
--- If you already have the table, add new columns:
--- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS first_name TEXT;
--- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS variant TEXT;
--- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS utm_source TEXT;
--- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS utm_medium TEXT;
--- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS utm_campaign TEXT;
--- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS utm_content TEXT;
--- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS landing_page TEXT;
--- ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS landed_at TIMESTAMPTZ;
-
--- Enable Row Level Security
-ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY;
-
--- Allow inserts from anonymous users (for signups)
-CREATE POLICY "Allow anonymous inserts" ON waitlist
-  FOR INSERT
-  TO anon
-  WITH CHECK (true);
-
--- Allow reading own email (for verification)
-CREATE POLICY "Allow reading by email" ON waitlist
-  FOR SELECT
-  TO anon
-  USING (true);
-```
-
-Signups store `email`, `variant` ('A' or 'B'), and optional UTM/landing fields (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `landing_page`, `landed_at`) for squeeze pages and ad attribution.
+Recommended API rules: **Create** open for public signups; **List / View / Update / Delete** restricted (this app uses a superuser account from Next.js API routes only).
 
 ### 3. Configure environment variables
 
-Create a `.env.local` file:
+Create a `.env.local` file (see `.env.example`):
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+POCKETBASE_URL=https://your-pocketbase-host.example.com
+POCKETBASE_ADMIN_EMAIL=your_superuser_email
+POCKETBASE_ADMIN_PASSWORD=your_superuser_password
 NEXT_PUBLIC_FB_PIXEL_ID=your_facebook_pixel_id
 ```
 
@@ -132,7 +97,14 @@ Three lightweight landing pages for ad campaigns:
 | `/stop-overpaying` | Cost shock → checker tool |
 | `/tool` | Direct link to ACX checker (no gate) + signup with first name under founder photo |
 
-UTM parameters are captured on arrival and attached to email signups. No nav, no footer links, mobile-first.
+UTM parameters are captured on arrival and passed to MailerLite on signup. Waitlist rows store `email`, optional `name`, and optional `source` (from `?ref=` or the page pathname). No nav, no footer links, mobile-first.
+
+**API routes (waitlist):**
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/waitlist` | POST | Sign up (`{ email, name?, source? }`) |
+| `/api/waitlist/verify` | POST | ACX checker gate: verify email or add squeeze-page visitors (`{ email, landing_page? }`) |
 
 ### 4. Run locally
 
@@ -173,19 +145,19 @@ Add these DNS records:
 ```
 src/
 ├── app/
-│   ├── page.tsx          # Main landing page
-│   ├── check/
-│   │   └── page.tsx      # ACX Checker page
-│   ├── layout.tsx        # Root layout
-│   └── globals.css       # Global styles
+│   ├── api/waitlist/
+│   │   ├── route.ts          # POST waitlist signup (PocketBase)
+│   │   └── verify/route.ts   # POST email verification for /check
+│   ├── page.tsx              # Main landing page
+│   ├── check/page.tsx        # ACX Checker page
+│   ├── layout.tsx
+│   └── globals.css
 ├── components/
-│   ├── WaitlistForm.tsx  # Email signup form
-│   ├── FileUpload.tsx    # Audio file uploader
-│   ├── ResultsDisplay.tsx # ACX analysis results
-│   ├── FeatureCard.tsx   # Feature cards
-│   └── AcxCheckerPromo.tsx # Promo after signup
+│   ├── WaitlistForm.tsx
+│   ├── FileUpload.tsx
+│   └── ...
 └── lib/
-    └── supabase.ts       # Supabase client
+    └── pocketbase.ts         # Server-only PocketBase admin client
 ```
 
 ## Future Enhancements
